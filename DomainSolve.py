@@ -19,13 +19,13 @@ def work(line, br):
         q.put("gg")
     url = 'http://' + param[0]
     try:
-        r = br.open(url, timeout = 1)
+        r = br.open(url)
         html = r.read()
         bm = chardet.detect(html)
         print bm
         title = br.title()
         if bm['encoding'] == 'GB2312':
-            title = title.decode(bm['encoding'])
+            title = title.decode(bm['encoding'], 'ignore')
             title.encode("utf-8")
     except mechanize.HTTPError as e:
         error.write(url + '\n')
@@ -38,13 +38,13 @@ def work(line, br):
         url = 'https://' + param[0]
         try:
             print url
-            r = br.open(url, timeout = 1)
+            r = br.open(url)
             html = r.read()
             bm = chardet.detect(html)
             print bm
             title = br.title()
             if bm['encoding'] == 'GB2312':
-                title = title.decode(bm['encoding'])
+                title = title.decode(bm['encoding'], 'ignore')
                 title.encode("utf-8")
         except mechanize.HTTPError as e:
             error.write(url + '\n')
@@ -54,6 +54,7 @@ def work(line, br):
             pass
         if (title == '' or title is None):
             q.put("gg")
+            return
     outline = url + '\t' + title + '\n' 
     q.put(outline)
 
@@ -78,6 +79,10 @@ if __name__=='__main__':
         print ("%d/3152"%(number))
         number += 1
         line = file.readline()
+        if not line:
+            file.close()
+            out.close()
+            exit()
         t = threading.Thread(target=work, args=(line, br))
         start_time = time.time()
         t.start()
@@ -85,11 +90,12 @@ if __name__=='__main__':
             flag = 0
             timeout = time.time() - start_time
             time.sleep(1)
-            if timeout > 10:
+            if timeout > 32:
                 break
             if q.qsize() > 0:
                 flag = 1
                 break
+        t.thread_stop = True
         if flag == 1:
             outline = q.get()
             if outline == 'gg':
